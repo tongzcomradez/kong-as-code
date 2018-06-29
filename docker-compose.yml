@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx
+    ports:
+      - 80:80
+
+  kong-database:
+    image: postgres:9.6
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+
+  kong:
+    image: kong:0.9.5
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    depends_on:
+      - kong-database
+    environment:
+      - DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+  
+  kong-dashboard:
+    image: pgbi/kong-dashboard
+    restart: unless-stopped
+    command: 'start --kong-url http://kong:8001'
+    ports:
+      - 8080:8080
+    depends_on:
+      - kong
+      - kong-database
+
+  kong-script:
+    build:
+      context: scripts
+      dockerfile: Dockerfile
+    depends_on:
+      - kong
+    environment:
+      - KONG_API_HOST=kong
+      - KONG_API_PORT=8001
